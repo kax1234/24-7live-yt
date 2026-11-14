@@ -1,0 +1,6 @@
+.env
+*.key
+*.json
+!package.json
+__pycache__/
+*.py[c
