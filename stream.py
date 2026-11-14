@@ -27,10 +27,12 @@ def main():
     video = videos[0]
     with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as playlist:
         playlist_path = playlist.name
-        for track in tracks:
-            # FFmpeg concat-demuxer quoting for paths containing spaces or apostrophes.
-            safe_path = str(track.resolve()).replace("'", "'\\''")
-            playlist.write(f"file '{safe_path}'\n")
+        # Repeat the ordered playlist many times instead of seeking/looping
+        # the concat demuxer, avoiding seek errors during long live sessions.
+        for _ in range(500):
+            for track in tracks:
+                safe_path = str(track.resolve()).replace("'", "'\\''")
+                playlist.write(f"file '{safe_path}'\n")
 
     print(f"Background: {video.name}", flush=True)
     print("Playlist:", flush=True)
@@ -40,7 +42,7 @@ def main():
     command = [
         "ffmpeg", "-hide_banner", "-loglevel", "info",
         "-stream_loop", "-1", "-re", "-i", str(video),
-        "-stream_loop", "-1", "-re", "-f", "concat", "-safe", "0", "-i", playlist_path,
+        "-re", "-f", "concat", "-safe", "0", "-i", playlist_path,
         "-map", "0:v:0", "-map", "1:a:0",
         "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
         "-r", "30", "-c:v", "libx264", "-preset", "veryfast",
