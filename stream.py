@@ -30,7 +30,7 @@ def main():
         for track in tracks:
             # FFmpeg concat-demuxer quoting for paths containing spaces or apostrophes.
             safe_path = str(track.resolve()).replace("'", "'\\''")
-            playlist.write(f"file '{safe_path}'\\n")
+            playlist.write(f"file '{safe_path}'\n")
 
     print(f"Background: {video.name}", flush=True)
     print("Playlist:", flush=True)
