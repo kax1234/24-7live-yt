@@ -17,12 +17,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and Node.js
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+          sudo apt-get install -y nodejs npm
 
-      - name: Start YouTube stream
+      - name: Install chat reader
+        run: npm install youtubei.js
+
+      - name: Start analytics and YouTube stream
         env:
           YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
-        run: python3 stream.py
+          YT_VIDEO_ID: "XVF4AhsrUqM"
+          ANALYTICS_URL: "https://kaxmok-analytics.kaxxmok.workers.dev"
+          ANALYTICS_INGEST_TOKEN: ${{ secrets.ANALYTICS_INGEST_TOKEN }}
+        run: |
+          python3 analytics.py &
+          ANALYTICS_PID=$!
+          trap 'kill "$ANALYTICS_PID" 2>/dev/null || true' EXIT
+          python3 stream.py
