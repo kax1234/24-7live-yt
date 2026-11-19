@@ -7,11 +7,33 @@ import time
 import urllib.error
 import urllib.request
 
+import zmq
+
 BASE_URL = os.environ.get("ANALYTICS_URL", "").rstrip("/")
 TOKEN = os.environ.get("ANALYTICS_INGEST_TOKEN", "").strip()
 VIDEO_ID = os.environ.get("YT_VIDEO_ID", "").strip()
+ZMQ_ENDPOINT = "tcp://127.0.0.1:5555"
 events = queue.Queue(maxsize=3000)
 stop = threading.Event()
+
+
+def switch_background(command):
+    """Send a live video-only switch to FFmpeg; audio is not restarted."""
+    try:
+        context = zmq.Context.instance()
+        socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.LINGER, 0)
+        socket.setsockopt(zmq.RCVTIMEO, 2000)
+        socket.setsockopt(zmq.SNDTIMEO, 2000)
+        socket.connect(ZMQ_ENDPOINT)
+        target = "1" if command == "!birthday" else "0"
+        socket.send_string(f"streamselect@birthday_bg map {target}")
+        reply = socket.recv_string()
+        socket.close()
+        print(f"[BACKGROUND] {command} sent to FFmpeg; response: {reply}", flush=True)
+    except Exception as exc:
+        print(f"[BACKGROUND] Could not switch for {command}: {type(exc).__name__}: {exc}", flush=True)
+
 
 def chat_reader():
     if not VIDEO_ID:
@@ -32,8 +54,10 @@ def chat_reader():
             try:
                 item = json.loads(line)
                 if item.get("author_id") and item.get("author"):
-                    # Keep message text so the Worker can identify and process its supported !commands.
                     item["text"] = str(item.get("text") or "")[:300]
+                    command = item["text"].strip().lower()
+                    if command in ("!birthday", "!normal"):
+                        switch_background(command)
                     try:
                         events.put_nowait(item)
                     except queue.Full:
@@ -50,6 +74,7 @@ def chat_reader():
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.kill()
+
 
 def sender():
     endpoint = BASE_URL + "/api/ingest"
@@ -90,6 +115,7 @@ def sender():
         if not sent:
             print(f"[ANALYTICS] FAILED: dropped {len(batch)} events after retries.", flush=True)
 
+
 def main():
     if not BASE_URL or not TOKEN:
         raise SystemExit("Missing ANALYTICS_URL or ANALYTICS_INGEST_TOKEN.")
@@ -105,6 +131,7 @@ def main():
     finally:
         stop.set()
         worker.join(timeout=20)
+
 
 if __name__ == "__main__":
     main()
