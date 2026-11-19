@@ -53,7 +53,7 @@ def main():
         "[1:v]scale=1280:720:force_original_aspect_ratio=decrease,"
         "pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=30,setsar=1,format=yuv420p[birthday];"
         "[normal][birthday]streamselect@birthday_bg=inputs=2:map=0,"
-        "zmq=bind_address=tcp\://127.0.0.1\:5555[outv]"
+        "zmq=bind_address=tcp\\\\://127.0.0.1\\\\:5555[outv]"
     )
 
     command = [
