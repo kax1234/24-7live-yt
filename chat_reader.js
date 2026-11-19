@@ -7,7 +7,9 @@ const log = (...args) => console.error("[CHAT]", ...args);
 function textOf(value) {
   if (value == null) return "";
   if (typeof value === "string") return value;
-  if (Array.isArray(value.runs)) return value.runs.map(run => run?.text || run?.emoji?.shortcuts?.[0] || "").join("");
+  if (Array.isArray(value.runs)) {
+    return value.runs.map(run => run?.text || run?.emoji?.shortcuts?.[0] || "").join("");
+  }
   if (typeof value.text === "string") return value.text;
   return "";
 }
@@ -30,8 +32,10 @@ async function main() {
       const badges = JSON.stringify(item.author?.badges || item.author?.badge || []).toLowerCase();
       const is_moderator = Boolean(item.author?.is_moderator || item.author?.isModerator || badges.includes("moderator"));
       const avatar_url = item.author?.thumbnails?.[0]?.url || item.author?.thumbnail?.[0]?.url || "";
-      // Do not forward or store chat message contents in analytics.
-      process.stdout.write(JSON.stringify({ author, author_id, is_moderator, avatar_url, text: "" }) + "\n");
+
+      // Forward the actual chat text: the analytics Worker parses !commands from this field.
+      const message = textOf(item.message || item.message_text || item.text || item.content).trim().slice(0, 300);
+      process.stdout.write(JSON.stringify({ author, author_id, is_moderator, avatar_url, text: message }) + "\n");
     } catch (err) {
       log("Skipped unparseable chat event:", err?.message || String(err));
     }
