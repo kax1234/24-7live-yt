@@ -32,8 +32,8 @@ def chat_reader():
             try:
                 item = json.loads(line)
                 if item.get("author_id") and item.get("author"):
-                    # Worker needs a text field, but message contents are intentionally not collected.
-                    item["text"] = ""
+                    # Keep message text so the Worker can identify and process its supported !commands.
+                    item["text"] = str(item.get("text") or "")[:300]
                     try:
                         events.put_nowait(item)
                     except queue.Full:
@@ -78,7 +78,7 @@ def sender():
                 with urllib.request.urlopen(req, timeout=15) as response:
                     result = json.loads(response.read().decode("utf-8", errors="replace"))
                     if response.status == 200 and result.get("ok"):
-                        print(f"[ANALYTICS] SUCCESS: {result.get('accepted', len(batch))} events uploaded.", flush=True)
+                        print(f"[ANALYTICS] SUCCESS: {result.get('accepted', len(batch))} chat events uploaded; {len(result.get('replies', []))} command replies returned.", flush=True)
                         sent = True
                         break
                     print("[ANALYTICS] Worker rejected batch:", str(result)[:300], flush=True)
