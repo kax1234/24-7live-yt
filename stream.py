@@ -36,7 +36,7 @@ def main():
         for _ in range(500):
             for track in tracks:
                 safe_path = str(track.resolve()).replace("'", "'\\''")
-                playlist.write(f"file '{safe_path}'\\n")
+                playlist.write(f"file '{safe_path}'\n")
 
     print(f"Normal background: {normal_video.name}", flush=True)
     print(f"Birthday background: {BIRTHDAY_IMAGE.name}", flush=True)
